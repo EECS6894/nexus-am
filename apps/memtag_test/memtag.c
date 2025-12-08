@@ -54,31 +54,25 @@ int main() {
 	long *genttag_ptr = ptr;
 	long *addtag_ptr = 0;
 
-	printf("genttag_ptr: %p\n", genttag_ptr);
+	printf("\tgenttag_ptr: %p\n", genttag_ptr);
 
-	asm volatile ("gentag %0, %1" : "=r" (genttag_ptr) : "r" (ptr));
+	asm volatile ("\tgentag %0, %1" : "=r" (genttag_ptr) : "r" (ptr));
 
-	printf("genttag_ptr: %p\n", genttag_ptr);
+	printf("\tgenttag_ptr: %p\n", genttag_ptr);
 
-	printf("GENTAG completed\n");
 
 
 	printf("Testing ADDTAG\n");
-	printf("addtag_ptr: %p\n", addtag_ptr);
+	printf("\taddtag_ptr: %p\n", addtag_ptr);
 	
-	asm volatile ("addtag %0, %1, 1" : "=r" (addtag_ptr) : "r" (genttag_ptr));
+	asm volatile ("\taddtag %0, %1, 1" : "=r" (addtag_ptr) : "r" (genttag_ptr));
 	
-	printf("addtag_ptr: %p\n", addtag_ptr);
+	printf("\taddtag_ptr: %p\n", addtag_ptr);
 	
-	printf("ADDTAG completed\n");
-	
-	
-	// enable tagging in M-mode, 4-bit tags (MT_MODE=2)
-	printf("Testing VITT Support\n");
-	
-	uint64_t val;
-	
+
+	// enable tagging w/ 4-bit tags (MT_MODE=2)
 	printf("Enabling MT_MODE\n");
+	uint64_t val;
 	
 	asm volatile ("csrr %0, 0x30A" : "=r"(val) );  // menvcfg
 	printf("\tread menvcfg=%p\n", val);
@@ -90,7 +84,7 @@ int main() {
 	printf("\tread menvcfg=%p\n", val);
 	
 	// check & set MVITT
-	printf("Allocating the VITT\n");
+	printf("Setting the VITT base register\n");
 	asm volatile ("csrr %0, 0x34C" : "=r"(val) );  // mvitt
 	printf("\tread mvitt=%p\n", val);
 
@@ -121,19 +115,11 @@ int main() {
 	asm volatile ("lb %0, 0(%1)" : "=r" (stored_tag) : "r" (vitt_entry));
 	printf("\treading from vitt address %p: %x\n", vitt_entry, stored_tag);
 
-	printf("\tattempting settag instruction...\n");
 	asm volatile ("settag %0, 0" :: "r" (genttag_ptr));
-	printf("\texecuted settag on %p: expect tag=%x @ vaddr=%p\n", genttag_ptr, (uintptr_t)genttag_ptr>>60, vitt_entry);
+	printf("\texecuted settag on %p: expectting tag=%x @ vaddr=%p\n", genttag_ptr, (uintptr_t)genttag_ptr>>60, vitt_entry);
 
 	asm volatile ("lb %0, 0(%1)" : "=r" (stored_tag) : "r" (vitt_entry));
 	printf("\treading from vitt address %p: %x\n", vitt_entry, stored_tag);
-
-	asm volatile ("sb %0, 0(%1)" :: "r" ((uintptr_t)genttag_ptr>>60), "r" (vitt_entry));
-	printf("\twriting tag of %p to %p\n", genttag_ptr, vitt_entry);
-
-	asm volatile ("lb %0, 0(%1)" : "=r" (stored_tag) : "r" (vitt_entry));
-	printf("\treading from vitt address %p: %x\n", vitt_entry, stored_tag);
-
 
 	return 0;
 }
