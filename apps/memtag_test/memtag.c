@@ -18,7 +18,33 @@ int main() {
 	else printf("\tUnknown");
 	printf(")\n");
 	
-	printf("Setting Address Translation Mode\n");
+	printf("Testing GENTAG\n");
+
+	// Very simple test - don't use malloc or complex operations
+	long x = 42;
+	long *ptr = &x;
+	long *genttag_ptr = ptr;
+	long *addtag_ptr = 0;
+
+	printf("\tgenttag_ptr: %p\n", genttag_ptr);
+
+	printf("\texecuting \"gentag genttag_ptr, genttag_ptr\"\n");
+	asm volatile ("\tgentag %0, %1" : "=r" (genttag_ptr) : "r" (ptr));
+
+	printf("\tgenttag_ptr: %p\n", genttag_ptr);
+
+
+
+	printf("Testing ADDTAG\n");
+	printf("\taddtag_ptr: %p\n", addtag_ptr);
+	
+	printf("\texecuting \"addtag addtag_ptr, genttag_ptr, 1\"\n");
+	asm volatile ("\taddtag %0, %1, 1" : "=r" (addtag_ptr) : "r" (genttag_ptr));
+	
+	printf("\taddtag_ptr: %p\n", addtag_ptr);
+	
+
+	printf("Setting Virtural Address Translation Mode\n");
 	uint64_t satp;
 	uint64_t mode;
 	
@@ -45,30 +71,6 @@ int main() {
 	} else {
 		printf("\tOther mode: %llu\n", mode);
 	}
-
-	printf("Testing GENTAG\n");
-
-	// Very simple test - don't use malloc or complex operations
-	long x = 42;
-	long *ptr = &x;
-	long *genttag_ptr = ptr;
-	long *addtag_ptr = 0;
-
-	printf("\tgenttag_ptr: %p\n", genttag_ptr);
-
-	asm volatile ("\tgentag %0, %1" : "=r" (genttag_ptr) : "r" (ptr));
-
-	printf("\tgenttag_ptr: %p\n", genttag_ptr);
-
-
-
-	printf("Testing ADDTAG\n");
-	printf("\taddtag_ptr: %p\n", addtag_ptr);
-	
-	asm volatile ("\taddtag %0, %1, 1" : "=r" (addtag_ptr) : "r" (genttag_ptr));
-	
-	printf("\taddtag_ptr: %p\n", addtag_ptr);
-	
 
 	// enable tagging w/ 4-bit tags (MT_MODE=2)
 	printf("Enabling MT_MODE\n");
@@ -109,14 +111,9 @@ int main() {
 	asm volatile ("lb %0, 0(%1)" : "=r" (stored_tag) : "r" (vitt_entry));
 	printf("\treading from vitt address %p: %x\n", vitt_entry, stored_tag);
 
-	asm volatile ("sb %0, 0(%1)" :: "r" ((uintptr_t)genttag_ptr>>60), "r" (vitt_entry));
-	printf("\twriting tag of %p to %p\n", genttag_ptr, vitt_entry);
-
-	asm volatile ("lb %0, 0(%1)" : "=r" (stored_tag) : "r" (vitt_entry));
-	printf("\treading from vitt address %p: %x\n", vitt_entry, stored_tag);
-
+	printf("\texecuting \"settag genttag_ptr, 0\"\n");
 	asm volatile ("settag %0, 0" :: "r" (genttag_ptr));
-	printf("\texecuted settag on %p: expectting tag=%x @ vaddr=%p\n", genttag_ptr, (uintptr_t)genttag_ptr>>60, vitt_entry);
+	printf("\texpecting tag=%x @ vaddr=%p\n", (uintptr_t)genttag_ptr>>60, vitt_entry);
 
 	asm volatile ("lb %0, 0(%1)" : "=r" (stored_tag) : "r" (vitt_entry));
 	printf("\treading from vitt address %p: %x\n", vitt_entry, stored_tag);
